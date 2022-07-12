@@ -11,10 +11,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/SoMuchForSubtlety/lpass/pkg/api"
 	"github.com/SoMuchForSubtlety/lpass/pkg/store"
 	"github.com/SoMuchForSubtlety/lpass/pkg/util"
+	"golang.org/x/term"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -59,10 +61,10 @@ func promptForCreds() (string, string) {
 	util.HandleErr(err)
 	username = strings.TrimRight(username, "\n")
 	fmt.Print("please enter your LastPass password: ")
-	pass, err := reader.ReadString('\n')
-	pass = strings.TrimRight(pass, "\n")
+	pass, err := term.ReadPassword(int(syscall.Stdin))
 	util.HandleErr(err)
-	return username, pass
+	fmt.Println("")
+	return username, string(pass)
 }
 
 func promptForOTP() string {
