@@ -5,38 +5,56 @@ Copyright © 2022 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"errors"
 	"fmt"
-	"os"
 	"regexp"
 	"strings"
 
 	"github.com/SoMuchForSubtlety/lpass/pkg/store"
 	"github.com/SoMuchForSubtlety/lpass/pkg/ui"
-	"github.com/SoMuchForSubtlety/lpass/pkg/util"
 
 	"github.com/spf13/cobra"
 )
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:   "get",
+	Use:   "get SECRET_NAME",
 	Short: "Search for secrets matching the provided query",
-	Run:   get,
+	RunE:  get,
+	ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+		if len(args) > 0 {
+			return nil, cobra.ShellCompDirectiveNoFileComp
+		}
+		entries, err := store.Load()
+		if err != nil {
+			return nil, cobra.ShellCompDirectiveError | cobra.ShellCompDirectiveNoFileComp
+		}
+
+		var matching []string
+		for _, e := range entries {
+			if strings.HasPrefix(strings.ToLower(e.Name), strings.ToLower(toComplete)) {
+				matching = append(matching, e.Name)
+			}
+		}
+
+		return matching, cobra.ShellCompDirectiveNoFileComp | cobra.ShellCompDirectiveNoSpace
+	},
 }
 
 var regex *bool
 
-func get(cmd *cobra.Command, args []string) {
+func get(cmd *cobra.Command, args []string) error {
 	entries, err := store.Load()
-	util.HandleErr(err)
+	if err != nil {
+		return err
+	}
 	if len(entries) == 0 {
-		fmt.Println("no entries found, try the refresh command")
-		return
+		return errors.New("no entries found, try the refresh command")
+
 	}
 
 	if len(args) == 0 {
-		fmt.Println("please provide a query")
-		os.Exit(1)
+		return errors.New("please provide a query")
 	}
 	query := args[0]
 
@@ -47,7 +65,7 @@ func get(cmd *cobra.Command, args []string) {
 	if *regex {
 		re, err := regexp.Compile(query)
 		if err != nil {
-			util.HandleErr(fmt.Errorf("invalid regexp: %w", err))
+			return fmt.Errorf("invalid regexp: %w", err)
 		}
 		matchFn = func(entry string) bool {
 			return re.MatchString(entry)
@@ -63,17 +81,18 @@ func get(cmd *cobra.Command, args []string) {
 	}
 	if len(matches) == 1 {
 		ui.Render(matches[0])
-		return
+		return nil
 	} else if len(matches) == 0 {
 		fmt.Println("no matching entries found")
-		return
+		return nil
 	}
 
 	entry := selectEntry(matches)
 	if entry == nil {
-		return
+		return nil
 	}
 	ui.Render(*entry)
+	return nil
 }
 
 func selectEntry(entries []store.Entry) *store.Entry {
