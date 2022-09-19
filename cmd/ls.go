@@ -1,6 +1,5 @@
 /*
 Copyright © 2022 NAME HERE <EMAIL ADDRESS>
-
 */
 package cmd
 
@@ -27,8 +26,28 @@ var listCmd = &cobra.Command{
 			return
 		}
 
+		groups := make(map[string][]store.Entry)
 		for _, e := range entries {
-			fmt.Println(e.Name)
+			if e.Group == "" {
+				e.Group = "default"
+			}
+			grp := groups[e.Group]
+			groups[e.Group] = append(grp, e)
+		}
+
+		for k, v := range groups {
+
+			fmt.Println(k)
+			for i, e := range v {
+				if e.Name == "" {
+					continue
+				}
+				if i == len(v)-1 {
+					fmt.Println("  └─ " + e.Name)
+				} else {
+					fmt.Println("  ├─ " + e.Name)
+				}
+			}
 		}
 	},
 }

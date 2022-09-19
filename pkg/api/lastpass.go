@@ -37,7 +37,7 @@ func Load(ctx context.Context, username, password, otp string) ([]store.Entry, e
 
 	var entries []store.Entry
 	for _, acc := range accounts {
-		entries = append(entries, store.Entry{
+		entry := store.Entry{
 			ID:       acc.ID,
 			Name:     acc.Name,
 			Password: acc.Password,
@@ -45,7 +45,11 @@ func Load(ctx context.Context, username, password, otp string) ([]store.Entry, e
 			Group:    acc.Group,
 			Username: acc.Username,
 			URL:      acc.URL,
-		})
+		}
+		if entry.Group == "" {
+			entry.Group = acc.Share
+		}
+		entries = append(entries, entry)
 	}
 	return entries, nil
 }
